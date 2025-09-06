@@ -1,6 +1,8 @@
 import os
+from converter import convert_PDF_to_CSV
 from flask import Flask, render_template, request, redirect, url_for, flash
 from werkzeug.utils import secure_filename
+
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key_here"  # Change this for production
@@ -35,12 +37,22 @@ def index():
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(file_path)
             flash(f'File "{filename}" uploaded successfully!')
+            convert_PDF_to_CSV(file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"File {file_path} deleted successfully")
+            else:
+                print(f"File {file_path} does not exist")
             return redirect(url_for("index"))
         else:
             flash("Invalid file type. Only PDF files are allowed.")
 
+    
+    
+    
     # Get list of uploaded files
     uploaded_files = []
     if os.path.exists(UPLOAD_FOLDER):
