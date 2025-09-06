@@ -162,19 +162,29 @@ main {
 
 .download-btn {
   display: inline-flex;
-  padding: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
   border-radius: 4px;
   background: #f1f8fe;
   transition: all 0.2s ease;
+  text-decoration: none;
+  color: #27ae60;
+  font-weight: 500;
+  gap: 0.5rem;
 }
 
 .download-btn:hover {
   background: #e3f2fd;
   transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .download-btn:active {
   transform: translateY(0);
+}
+
+.download-text {
+  font-size: 0.875rem;
 }
 footer {
   text-align: center;
@@ -208,7 +218,10 @@ footer {
   }
 
   .download-btn {
-    align-self: flex-end;
-    margin-top: 0.5rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .download-text {
+    font-size: 0.8rem;
   }
 }

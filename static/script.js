@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
             <h3>Selected file: ${file.name}</h3>
-            <p>Click "Upload PDF" to submit or drag another file</p>
+            <p>Click "Prepare Your Spreadsheet" to submit or drag another file</p>
             <label for="file-input" class="browse-btn">Change File</label>
         `;
 

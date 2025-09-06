@@ -18,20 +18,20 @@
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
-        <h3>Drag & Drop your PDF here</h3>
+        <h3>Select your Bank PDF by dragging it here</h3>
         <p>or</p>
         <label for="file-input" class="browse-btn">Browse Files</label>
         <input type="file" id="file-input" name="file" accept=".pdf" hidden />
       </div>
     </div>
     <button type="submit" class="submit-btn" id="submit-btn" disabled>
-      Upload PDF
+      Prepare Your Spreadsheet
     </button>
   </form>
 
   {% if uploaded_files %}
   <div class="uploaded-files">
-    <h2>Uploaded Files</h2>
+    <h2>✅ Your spreadsheet is ready! Click Download</h2>
     <ul>
       {% for file in uploaded_files %}
       <li>
@@ -41,6 +41,7 @@
           class="download-btn"
           title="Download {{ file }}"
         >
+          <span class="download-text">Download</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="18"
