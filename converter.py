@@ -1,6 +1,8 @@
 import pdfplumber
 import pandas as pd
 import re
+from io import BytesIO, StringIO
+import os
 
 # Regex rules
 single_letter = re.compile(r"^[A-Za-z]$")
@@ -12,21 +14,21 @@ amount_pattern = re.compile(r"[+-]\$[\d,]+\.\d{2}")
 balance_pattern = re.compile(r"\$[\d,]+\.\d{2}")
 file_name_pattern = re.compile(r"([^/\\]+)(?=\.[^.]+$)")
 
-
-def convert_PDF_to_CSV(file_path: str) -> str:
-    """Converts PDF to CSV and returns the pathname of the newly created csv file"""
-
-    input = file_name_pattern.search(file_path).group(1)
-    output_path = f"./uploads/{input}.csv"
-    print(output_path)
+def convert_PDF_to_CSV(file_bytes: bytes, original_filename: str) -> tuple:
+    """Converts PDF bytes to CSV string and returns both the data and base filename"""
+    
+    # Extract base filename without extension
+    base_filename = os.path.splitext(original_filename)[0]
+    
     pdf_text = []
 
-    # this will intake the file path of the file that was uploaded
-    input_pdf = file_path
-
-    with pdfplumber.open(input_pdf) as pdf:
-        for page in pdf.pages:
-            pdf_text.extend(page.extract_text().splitlines())
+    # Use BytesIO to create a file-like object from bytes
+    with BytesIO(file_bytes) as pdf_file:
+        with pdfplumber.open(pdf_file) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                if text:
+                    pdf_text.extend(text.splitlines())
 
     cleaned_text = []
     for line in pdf_text:
@@ -76,14 +78,8 @@ def convert_PDF_to_CSV(file_path: str) -> str:
             Date += day_match.group()
             line = date_day.sub("", line)
             Description += line
-            # print(f'Date: {Date}')
-            # print(f'Description: {Description}')
-            # print(f'Ref: {Reference}')
-            # print(f'AMT: {Amount}')
-            # print(f'BAL: {Balance}')
-            # print("\n")
 
-            # All the Data from the transction should be grabed so add to df
+            # All the Data from the transaction should be grabbed so add to df
             row = {
                 "Date": Date,
                 "Description": Description,
@@ -93,6 +89,7 @@ def convert_PDF_to_CSV(file_path: str) -> str:
             }
             df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
 
+    # Data cleaning
     df["Amount"] = pd.to_numeric(
         df["Amount"].str.replace(r"[,$]", "", regex=True), errors="coerce"
     )
@@ -101,5 +98,9 @@ def convert_PDF_to_CSV(file_path: str) -> str:
     )
     df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
 
-    df.to_csv(output_path, index=False)
-    return output_path
+    # Convert DataFrame to CSV string in memory
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False)
+    csv_data = csv_buffer.getvalue()
+    
+    return csv_data, base_filename
