@@ -4,13 +4,15 @@ from flask import Flask, render_template, request, redirect, url_for, flash, sen
 from werkzeug.utils import secure_filename
 from io import BytesIO, StringIO
 import uuid
+from datetime import timedelta
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key_here"  # Change this for production
+app.secret_key = "your_secret_key_here"  
 
 # Configuration
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=1)
 ALLOWED_EXTENSIONS = {"pdf"}
-MAX_FILE_SIZE = 128 * 1024 * 1024  # 128MB
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 
 def allowed_file(filename):
@@ -18,6 +20,9 @@ def allowed_file(filename):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    
+    session.permanent = True
+    
     if request.method == "POST":
         # Check if the post request has the file part
         if "file" not in request.files:
@@ -55,9 +60,10 @@ def index():
         else:
             flash("Invalid file type. Only PDF files are allowed.")
     
-    # Check if we have a converted file ready
+    #Check if we have a converted file ready and get the filename
     converted_file = session.get('converted_file')
-    return render_template("index.html", has_file=converted_file is not None)
+    filename = converted_file['filename'] if converted_file else None
+    return render_template("index.html", filename=filename)
 
 @app.route('/download')
 def download_file():
