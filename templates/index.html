@@ -29,17 +29,16 @@
     </button>
   </form>
 
-  {% if uploaded_files %}
+  {% if filename %}
   <div class="uploaded-files">
     <h2>✅ Your spreadsheet is ready! Click Download</h2>
     <ul>
-      {% for file in uploaded_files %}
       <li>
-        <span class="file-name">{{ file }}</span>
+        <span class="file-name">{{ filename }}</span>
         <a
-          href="{{ url_for('download_file', filename=file) }}"
+          href="{{ url_for('download_file') }}"
           class="download-btn"
-          title="Download {{ file }}"
+          title="Download {{ filename }}"
         >
           <span class="download-text">Download</span>
           <svg
@@ -59,9 +58,9 @@
           </svg>
         </a>
       </li>
-      {% endfor %}
     </ul>
   </div>
   {% endif %}
 </div>
+
 {% endblock %}

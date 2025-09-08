@@ -186,6 +186,22 @@ main {
 .download-text {
   font-size: 0.875rem;
 }
+
+.download-section {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.file-note {
+  font-size: 14px;
+  color: #666;
+  margin-top: 10px;
+}
+
+.dragover {
+  background-color: #f0f7ff;
+  border: 2px dashed #4a90e2 !important;
+}
 footer {
   text-align: center;
   padding: 1.5rem;
