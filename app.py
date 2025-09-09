@@ -56,14 +56,15 @@ def index():
 
                     # Check if file is empty
                     if len(file_bytes) == 0:
-                        flash(f"Uploaded file '{file.filename}' is empty")
+                        flash(f"Uploaded file '{secure_filename(file.filename)}' is empty")
                         continue
 
                     original_filename = file.filename
+                    safe_filename = secure_filename(original_filename)
 
                     # Convert PDF to CSV in memory
                     csv_data, base_filename = convert_PDF_to_CSV(
-                        file_bytes, original_filename
+                        file_bytes, safe_filename
                     )
 
                     # Store file info for session
@@ -71,14 +72,14 @@ def index():
                         {
                             "csv_data": csv_data,
                             "filename": f"{base_filename}.csv",
-                            "original_name": original_filename,
+                            "original_name": safe_filename,
                         }
                     )
 
                     successful_conversions += 1
 
                 except Exception as e:
-                    flash(f'Error converting file "{file.filename}": {str(e)}')
+                    flash(f'Error converting file "{secure_filename(file.filename)}": {str(e)}')
 
         if successful_conversions > 0:
             # Store all converted files in session
