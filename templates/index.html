@@ -18,29 +18,49 @@
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
-        <h3>Select your Bank PDF by dragging it here</h3>
+        <h3>Select your Bank PDFs by dragging them here</h3>
         <p>or</p>
         <label for="file-input" class="browse-btn">Browse Files</label>
-        <input type="file" id="file-input" name="file" accept=".pdf" hidden />
+        <input
+          type="file"
+          id="file-input"
+          name="file"
+          accept=".pdf"
+          multiple
+          hidden
+        />
       </div>
     </div>
     <button type="submit" class="submit-btn" id="submit-btn" disabled>
       Prepare Your Spreadsheet
     </button>
   </form>
-
-  {% if filename %}
+  <div class="explanation-section">
+    <h3>How It Works</h3>
+    <p>
+      This tool securely converts your bank statement PDFs into organized
+      spreadsheets (CSV format) right in your browser. Simply upload your
+      statements, and our system automatically extracts transaction data, cleans
+      it up, and structures it into columns for Date, Description, Reference,
+      Amount, and Balance. The entire process happens in memory - your financial
+      documents are never stored on our servers, ensuring complete privacy and
+      security. Download your formatted data instantly for easy analysis in
+      Excel, Google Sheets, or any accounting software.
+    </p>
+  </div>
+  {% if converted_files %}
   <div class="uploaded-files">
-    <h2>✅ Your spreadsheet is ready! Click Download</h2>
+    <h2>✅ Your spreadsheets are ready! Click to Download</h2>
     <ul>
+      {% for file in converted_files %}
       <li>
-        <span class="file-name">{{ filename }}</span>
+        <span class="file-name">{{ file.original_name }}</span>
         <a
-          href="{{ url_for('download_file') }}"
+          href="{{ url_for('download_file', file_index=loop.index0) }}"
           class="download-btn"
-          title="Download {{ filename }}"
+          title="Download {{ file.filename }}"
         >
-          <span class="download-text">Download</span>
+          <span class="download-text">Download CSV</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="18"
@@ -58,6 +78,7 @@
           </svg>
         </a>
       </li>
+      {% endfor %}
     </ul>
   </div>
   {% endif %}
