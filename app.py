@@ -28,84 +28,86 @@ def index():
             flash("No file part")
             return redirect(request.url), 400  
         
-        file = request.files["file"]
+        files = request.files.getlist("file")  # Get list of files
         
         # If user does not select file, browser might submit an empty part
-        if file.filename == "":
-            flash("No selected file")
+        if not files or all(file.filename == '' for file in files):
+            flash("No files selected")
             return redirect(request.url), 400  
         
-        if file and allowed_file(file.filename):
-            try:
-                # read file into memory
-                file_bytes = file.read()
-                
-                # check if the file is empty
-                if len(file_bytes) == 0:
-                    flash("Uploaded file is empty")
-                    return redirect(request.url), 400  
-                
-                original_filename = file.filename
-                
-                # convert PDF to CSV in memory
-                csv_data, base_filename = convert_PDF_to_CSV(file_bytes, original_filename)
-                
-                # store in session for download
-                session['converted_file'] = {
-                    'csv_data': csv_data,
-                    'filename': f"{base_filename}.csv"
-                }
-                
-                flash(f'File "{original_filename}" converted successfully! Ready for download.')
-                
-            except Exception as e:
-                flash(f'Error converting file: {str(e)}')
-                return redirect(request.url), 500  
-            
-            return redirect(url_for("index"))
-        else:
-            flash("Invalid file type. Only PDF files are allowed.")
-            return redirect(request.url), 400  
+        successful_conversions = 0
+        converted_files = []
+        
+        for file in files:
+            if file and allowed_file(file.filename):
+                try:
+                    # Read file content into memory
+                    file_bytes = file.read()
+                    
+                    # Check if file is empty
+                    if len(file_bytes) == 0:
+                        flash(f"Uploaded file '{file.filename}' is empty")
+                        continue
+                    
+                    original_filename = file.filename
+                    
+                    # Convert PDF to CSV in memory
+                    csv_data, base_filename = convert_PDF_to_CSV(file_bytes, original_filename)
+                    
+                    # Store file info for session
+                    converted_files.append({
+                        'csv_data': csv_data,
+                        'filename': f"{base_filename}.csv",
+                        'original_name': original_filename
+                    })
+                    
+                    successful_conversions += 1
+                    
+                except Exception as e:
+                    flash(f'Error converting file "{file.filename}": {str(e)}')
+        
+        if successful_conversions > 0:
+            # Store all converted files in session
+            session['converted_files'] = converted_files
+            flash(f'Successfully converted {successful_conversions} file(s)! Ready for download.')
+        
+        return redirect(url_for("index"))
     
-    # check if we have a converted file ready and get the filename
-    converted_file = session.get('converted_file')
-    filename = converted_file['filename'] if converted_file else None
-    return render_template("index.html", filename=filename)
+    # Check if we have converted files ready
+    converted_files = session.get('converted_files', [])
+    return render_template("index.html", converted_files=converted_files)
 
-@app.route('/download')
-def download_file():
-    """Route to download converted CSV from session"""
+@app.route('/download/<int:file_index>')
+def download_file(file_index):
+    """Route to download individual converted CSV files"""
     try:
-        converted_file = session.get('converted_file')
-        if not converted_file:
-            flash('No file found to download. Please upload a file first.')
-            return redirect(url_for('index')), 404  
-            
-        # create an inmemory file from session data
-        csv_data = converted_file['csv_data']
-        filename = converted_file['filename']
+        converted_files = session.get('converted_files', [])
+        if not converted_files or file_index >= len(converted_files):
+            flash('File not found. Session Expired. Please upload files.')
+            return redirect(url_for('index'))
         
-        # turn object into file and send it
+        file_data = converted_files[file_index]
         csv_buffer = BytesIO()
-        csv_buffer.write(csv_data.encode('utf-8'))  # encode string to bytes
+        csv_buffer.write(file_data['csv_data'].encode('utf-8'))
         csv_buffer.seek(0)
         
         return send_file(
             csv_buffer,
             as_attachment=True,
-            download_name=filename,
+            download_name=file_data['filename'],
             mimetype='text/csv',
         )
+        
     except Exception as e:
         flash(f'Error downloading file: {str(e)}')
-        return redirect(url_for('index')), 500  
+        return redirect(url_for('index')), 500
 
 @app.route('/clear')
 def clear_session():
-    """Clear the converted file from session"""
-    session.pop('converted_file', None)
-    flash('Session cleared. You can upload a new file.')
-    return redirect(url_for('index'))
+    """Clear the converted files from session and refresh the page"""
+    session.pop('converted_files', None)
+    flash('Session cleared. You can upload new files.')
+    return redirect(url_for('index'))  
 
 @app.errorhandler(404)
 def not_found_error(error):
