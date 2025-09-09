@@ -4,9 +4,9 @@ A secure web application that converts bank statement PDFs into structured CSV f
 
 ## Demo
 
-<video src="https://github.com/TheHungryGuy/Python-PDF-to-CSV/raw/refs/heads/main/PDF%20Demo.mp4" controls width="100%">
-  Your browser does not support the video tag.
-</video>
+[![Bank PDF to CSV Converter Demo](https://img.youtube.com/vi/1vmPoUhqtUk/hqdefault.jpg)](https://www.youtube.com/watch?v=1vmPoUhqtUk)
+
+_Click the image above to watch the demo on YouTube_
 
 ## Features
 
