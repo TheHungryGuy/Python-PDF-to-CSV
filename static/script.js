@@ -5,8 +5,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("upload-form");
   const uploadPlaceholder = document.getElementById("upload-placeholder");
 
-  // Store the current file for form submission
-  let currentFile = null;
+  // Store the current files for form submission
+  let currentFiles = [];
 
   // Prevent default drag behaviors
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
@@ -58,34 +58,43 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function handleFiles(files) {
-    if (files.length > 1) {
-      alert("Please upload only one file at a time.");
+    currentFiles = Array.from(files).filter(
+      (file) => file.type === "application/pdf"
+    );
+
+    if (currentFiles.length === 0) {
+      alert("Please select PDF files only.");
       return;
     }
 
-    const file = files[0];
-
-    if (file.type !== "application/pdf") {
-      alert("Please select a PDF file.");
-      return;
+    // Update the UI to show the selected files
+    if (currentFiles.length === 1) {
+      uploadPlaceholder.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <h3>Selected file: ${currentFiles[0].name}</h3>
+        <p>Click "Prepare Your Spreadsheet" to submit or drag another file</p>
+        <label for="file-input" class="browse-btn">Change File</label>
+      `;
+    } else {
+      uploadPlaceholder.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <h3>Selected ${currentFiles.length} files</h3>
+        <p>Click "Prepare Your Spreadsheet" to submit or drag more files</p>
+        <label for="file-input" class="browse-btn">Change Files</label>
+      `;
     }
-
-    // Store the file for form submission
-    currentFile = file;
-
-    // Update the UI to show the selected file
-    uploadPlaceholder.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <h3>Selected file: ${file.name}</h3>
-            <p>Click "Prepare Your Spreadsheet" to submit or drag another file</p>
-            <label for="file-input" class="browse-btn">Change File</label>
-        `;
 
     // Enable the submit button
     submitBtn.disabled = false;
@@ -110,17 +119,19 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Form submission - create a FormData object with the file
+  // Form submission - create a FormData object with the files
   form.addEventListener("submit", function (e) {
-    if (!currentFile) {
+    if (currentFiles.length === 0) {
       e.preventDefault();
-      alert("Please select a PDF file to upload.");
+      alert("Please select at least one PDF file to upload.");
       return;
     }
 
-    // Create a new FormData object and append the file
+    // Create a new FormData object and append all files
     const formData = new FormData();
-    formData.append("file", currentFile);
+    currentFiles.forEach((file) => {
+      formData.append("file", file);
+    });
 
     // Use fetch to submit the form
     e.preventDefault();
