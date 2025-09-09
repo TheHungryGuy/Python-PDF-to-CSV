@@ -1,5 +1,4 @@
-import os
-from converter import convert_PDF_to_CSV
+from utils.converter import convert_PDF_to_CSV
 from flask import (
     Flask,
     render_template,
@@ -13,7 +12,6 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 from io import BytesIO, StringIO
-import uuid
 from datetime import timedelta
 
 app = Flask(__name__)
