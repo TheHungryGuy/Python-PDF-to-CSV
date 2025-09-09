@@ -8,13 +8,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // Store the current files for form submission
   let currentFiles = [];
 
-  // Prevent default drag behaviors
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
     dropZone.addEventListener(eventName, preventDefaults, false);
     document.body.addEventListener(eventName, preventDefaults, false);
   });
 
-  // Highlight drop area when item is dragged over it
+  // highlights drop area when item is dragged over it
   ["dragenter", "dragover"].forEach((eventName) => {
     dropZone.addEventListener(eventName, highlight, false);
   });
@@ -23,10 +22,8 @@ document.addEventListener("DOMContentLoaded", function () {
     dropZone.addEventListener(eventName, unhighlight, false);
   });
 
-  // Handle dropped files
   dropZone.addEventListener("drop", handleDrop, false);
 
-  // Handle file selection via button
   fileInput.addEventListener("change", handleFileSelect, false);
 
   function preventDefaults(e) {
@@ -96,10 +93,9 @@ document.addEventListener("DOMContentLoaded", function () {
       `;
     }
 
-    // Enable the submit button
     submitBtn.disabled = false;
 
-    // Reattach the event listener for the new "Change File" button
+    // Reattach the event listener for the Change File button
     document
       .querySelector(".browse-btn")
       .addEventListener("click", function (e) {
@@ -119,7 +115,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Form submission - create a FormData object with the files
   form.addEventListener("submit", function (e) {
     if (currentFiles.length === 0) {
       e.preventDefault();

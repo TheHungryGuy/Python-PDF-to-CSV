@@ -14,12 +14,12 @@ amount_pattern = re.compile(r"[+-]\$[\d,]+\.\d{2}")
 balance_pattern = re.compile(r"\$[\d,]+\.\d{2}")
 file_name_pattern = re.compile(r"([^/\\]+)(?=\.[^.]+$)")
 
+
 def convert_PDF_to_CSV(file_bytes: bytes, original_filename: str) -> tuple:
     """Converts PDF bytes to CSV string and returns both the data and base filename"""
-    
-    
+
     base_filename = os.path.splitext(original_filename)[0]
-    
+
     pdf_text = []
 
     with BytesIO(file_bytes) as pdf_file:
@@ -101,5 +101,5 @@ def convert_PDF_to_CSV(file_bytes: bytes, original_filename: str) -> tuple:
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False)
     csv_data = csv_buffer.getvalue()
-    
+
     return csv_data, base_filename
