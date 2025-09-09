@@ -2,6 +2,10 @@
 
 A secure web application that converts bank statement PDFs into structured CSV files with privacy-first design.
 
+## Demo
+
+https://github.com/TheHungryGuy/Python-PDF-to-CSV/raw/refs/heads/main/PDF%20Demo.mp4
+
 ## Features
 
 - **Secure Processing**: Files are processed entirely in memory - never stored on disk
