@@ -1,6 +1,6 @@
 import os
 from converter import convert_PDF_to_CSV
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session, abort
 from werkzeug.utils import secure_filename
 from io import BytesIO, StringIO
 import uuid
@@ -20,32 +20,37 @@ def allowed_file(filename):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    
     session.permanent = True
     
     if request.method == "POST":
         # Check if the post request has the file part
         if "file" not in request.files:
             flash("No file part")
-            return redirect(request.url)
+            return redirect(request.url), 400  
         
         file = request.files["file"]
         
         # If user does not select file, browser might submit an empty part
         if file.filename == "":
             flash("No selected file")
-            return redirect(request.url)
+            return redirect(request.url), 400  
         
         if file and allowed_file(file.filename):
             try:
-                # Read file content into memory
+                # read file into memory
                 file_bytes = file.read()
+                
+                # check if the file is empty
+                if len(file_bytes) == 0:
+                    flash("Uploaded file is empty")
+                    return redirect(request.url), 400  
+                
                 original_filename = file.filename
                 
-                # Convert PDF to CSV in memory
+                # convert PDF to CSV in memory
                 csv_data, base_filename = convert_PDF_to_CSV(file_bytes, original_filename)
                 
-                # Store in session for download
+                # store in session for download
                 session['converted_file'] = {
                     'csv_data': csv_data,
                     'filename': f"{base_filename}.csv"
@@ -55,12 +60,14 @@ def index():
                 
             except Exception as e:
                 flash(f'Error converting file: {str(e)}')
+                return redirect(request.url), 500  
             
             return redirect(url_for("index"))
         else:
             flash("Invalid file type. Only PDF files are allowed.")
+            return redirect(request.url), 400  
     
-    #Check if we have a converted file ready and get the filename
+    # check if we have a converted file ready and get the filename
     converted_file = session.get('converted_file')
     filename = converted_file['filename'] if converted_file else None
     return render_template("index.html", filename=filename)
@@ -72,15 +79,15 @@ def download_file():
         converted_file = session.get('converted_file')
         if not converted_file:
             flash('No file found to download. Please upload a file first.')
-            return redirect(url_for('index'))
+            return redirect(url_for('index')), 404  
             
-        # Create in-memory file from session data
+        # create an inmemory file from session data
         csv_data = converted_file['csv_data']
         filename = converted_file['filename']
         
-        # Create BytesIO object (not StringIO) and send as file
+        # turn object into file and send it
         csv_buffer = BytesIO()
-        csv_buffer.write(csv_data.encode('utf-8'))  # Encode string to bytes
+        csv_buffer.write(csv_data.encode('utf-8'))  # encode string to bytes
         csv_buffer.seek(0)
         
         return send_file(
@@ -88,11 +95,10 @@ def download_file():
             as_attachment=True,
             download_name=filename,
             mimetype='text/csv',
-            
         )
     except Exception as e:
         flash(f'Error downloading file: {str(e)}')
-        return redirect(url_for('index'))
+        return redirect(url_for('index')), 500  
 
 @app.route('/clear')
 def clear_session():
@@ -100,6 +106,21 @@ def clear_session():
     session.pop('converted_file', None)
     flash('Session cleared. You can upload a new file.')
     return redirect(url_for('index'))
+
+@app.errorhandler(404)
+def not_found_error(error):
+    flash('The requested resource was not found.')
+    return redirect(url_for('index')), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    flash('An internal server error occurred. Please try again.')
+    return redirect(url_for('index')), 500
+
+@app.errorhandler(413)
+def too_large(error):
+    flash('File too large. Maximum size is 16MB.')
+    return redirect(url_for('index')), 413
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

@@ -17,12 +17,11 @@ file_name_pattern = re.compile(r"([^/\\]+)(?=\.[^.]+$)")
 def convert_PDF_to_CSV(file_bytes: bytes, original_filename: str) -> tuple:
     """Converts PDF bytes to CSV string and returns both the data and base filename"""
     
-    # Extract base filename without extension
+    
     base_filename = os.path.splitext(original_filename)[0]
     
     pdf_text = []
 
-    # Use BytesIO to create a file-like object from bytes
     with BytesIO(file_bytes) as pdf_file:
         with pdfplumber.open(pdf_file) as pdf:
             for page in pdf.pages:
