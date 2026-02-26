@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const submitBtn = document.getElementById("submit-btn");
   const form = document.getElementById("upload-form");
   const uploadPlaceholder = document.getElementById("upload-placeholder");
+  const loadingOverlay = document.getElementById("loading-overlay");
 
   // Store the current files for form submission
   let currentFiles = [];
@@ -56,7 +57,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function handleFiles(files) {
     currentFiles = Array.from(files).filter(
-      (file) => file.type === "application/pdf"
+      (file) => file.type === "application/pdf",
     );
 
     if (currentFiles.length === 0) {
@@ -122,14 +123,16 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Create a new FormData object and append all files
     const formData = new FormData();
     currentFiles.forEach((file) => {
       formData.append("file", file);
     });
 
-    // Use fetch to submit the form
     e.preventDefault();
+
+    // Show loading overlay
+    loadingOverlay.classList.add("active");
+    submitBtn.disabled = true;
 
     fetch("/", {
       method: "POST",
@@ -139,13 +142,15 @@ document.addEventListener("DOMContentLoaded", function () {
         if (response.redirected) {
           window.location.href = response.url;
         } else {
-          return response.text().then((text) => {
+          return response.text().then(() => {
             throw new Error("Upload failed");
           });
         }
       })
       .catch((error) => {
         console.error("Error:", error);
+        loadingOverlay.classList.remove("active");
+        submitBtn.disabled = false;
         alert("Upload failed. Please try again.");
       });
   });

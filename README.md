@@ -8,6 +8,9 @@ A secure web application that converts bank statement PDFs into structured CSV f
 
 _Click the image above to watch the demo on YouTube_
 
+![Loading State](LoadingCircle.png)
+_Loading indicator shown while the PDF is being processed_
+
 ## Features
 
 - **Secure Processing**: Files are processed entirely in memory - never stored on disk
