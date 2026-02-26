@@ -1,105 +1,115 @@
-import pdfplumber
-import pandas as pd
-import re
-from io import BytesIO, StringIO
 import os
+import time
+import requests
+import pandas as pd
+from io import BytesIO, StringIO
+from html.parser import HTMLParser
 
-# Regex rules
-single_letter = re.compile(r"^[A-Za-z]$")
-single_letter_inside = re.compile(r"\b[A-Za-z]\b")
-date_year_month = re.compile(r"^(\d{4}-\d{2}-)")
-date_day = re.compile(r"^\d{2}")
-reference_pattern = re.compile(r"[A-Za-z]{2,5}\d+")
-amount_pattern = re.compile(r"[+-]\$[\d,]+\.\d{2}")
-balance_pattern = re.compile(r"\$[\d,]+\.\d{2}")
-file_name_pattern = re.compile(r"([^/\\]+)(?=\.[^.]+$)")
+DATALAB_API_URL = "https://www.datalab.to/api/v1/marker"
+HEADERS = {"X-API-Key": os.getenv("DATALAB_API_KEY")}
+
+
+class TableHTMLParser(HTMLParser):
+    """Parses an HTML table string into a list of rows (each row is a list of strings)."""
+    def __init__(self):
+        super().__init__()
+        self.rows = []
+        self._current_row = None
+        self._current_cell = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "tr":
+            self._current_row = []
+        elif tag in ("td", "th") and self._current_row is not None:
+            self._current_cell = ""
+
+    def handle_endtag(self, tag):
+        if tag in ("td", "th") and self._current_cell is not None:
+            self._current_row.append(self._current_cell.strip())
+            self._current_cell = None
+        elif tag == "tr" and self._current_row is not None:
+            if self._current_row:
+                self.rows.append(self._current_row)
+            self._current_row = None
+
+    def handle_data(self, data):
+        if self._current_cell is not None:
+            self._current_cell += data
+
+
+def parse_html_table(html: str) -> pd.DataFrame:
+    parser = TableHTMLParser()
+    parser.feed(html)
+    if not parser.rows:
+        return None
+    headers = parser.rows[0]
+    data = parser.rows[1:]
+    return pd.DataFrame(data, columns=headers)
+
+
+def extract_blocks(node: dict, collected: list):
+    """Recursively walk the JSON tree and collect Table blocks."""
+    if node.get("block_type") == "Table":
+        collected.append(node)
+    for child in node.get("children", []):
+        extract_blocks(child, collected)
 
 
 def convert_PDF_to_CSV(file_bytes: bytes, original_filename: str) -> tuple:
-    """Converts PDF bytes to CSV string and returns both the data and base filename"""
-
     base_filename = os.path.splitext(original_filename)[0]
 
-    pdf_text = []
-
-    with BytesIO(file_bytes) as pdf_file:
-        with pdfplumber.open(pdf_file) as pdf:
-            for page in pdf.pages:
-                text = page.extract_text()
-                if text:
-                    pdf_text.extend(text.splitlines())
-
-    cleaned_text = []
-    for line in pdf_text:
-        new_line = single_letter_inside.sub("", line).strip()
-        if new_line:
-            cleaned_text.append(new_line)
-    pdf_text = cleaned_text
-
-    df = pd.DataFrame(columns=["Date", "Description", "Reference", "Amount", "Balance"])
-
-    Date = ""
-    Description = ""
-    Reference = ""
-    Amount = ""
-    Balance = ""
-
-    start_processing = False
-
-    for line in pdf_text:
-        # check if we've reached the marker line
-        if not start_processing:
-            if "transaction history" in line.lower():
-                start_processing = True
-            continue  # skip until found
-        date_match = date_year_month.match(line)
-        if date_match:
-            Date = date_match.group()
-            line = date_year_month.sub("", line).strip()
-            Description = line
-
-        ref_match = reference_pattern.search(line)
-        if ref_match:
-            Reference = ref_match.group()
-            line = reference_pattern.sub("", line).strip()
-        amt_match = amount_pattern.search(line)
-        if amt_match:
-            Amount = amt_match.group()
-            line = amount_pattern.sub("", line).strip()
-        bal_match = balance_pattern.search(line)
-        if bal_match:
-            Balance = bal_match.group()
-            line = balance_pattern.sub("", line).strip()
-            if line:
-                Description = line
-        day_match = date_day.search(line)
-        if day_match:
-            Date += day_match.group()
-            line = date_day.sub("", line)
-            Description += line
-
-            # All the Data from the transaction should be grabbed so add to df
-            row = {
-                "Date": Date,
-                "Description": Description,
-                "Reference": Reference,
-                "Amount": Amount,
-                "Balance": Balance,
-            }
-            df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
-
-    # Data cleaning
-    df["Amount"] = pd.to_numeric(
-        df["Amount"].str.replace(r"[,$]", "", regex=True), errors="coerce"
+    # Submit the PDF to the API
+    response = requests.post(
+        DATALAB_API_URL,
+        files={"file": (original_filename, BytesIO(file_bytes), "application/pdf")},
+        data={"output_format": "json", "mode": "balanced"},
+        headers=HEADERS,
     )
-    df["Balance"] = pd.to_numeric(
-        df["Balance"].str.replace(r"[,$]", "", regex=True), errors="coerce"
-    )
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    response.raise_for_status()
+    check_url = response.json()["request_check_url"]
 
-    # Convert DataFrame to CSV string in memory
+    # Poll until complete
+    result = None
+    for i in range(300):
+        poll = requests.get(check_url, headers=HEADERS).json()
+        if poll["status"] == "complete":
+            result = poll
+            break
+        elif poll["status"] == "failed":
+            raise RuntimeError(f"Datalab conversion failed: {poll.get('error')}")
+        time.sleep(2)
+
+    if result is None:
+        raise TimeoutError("Datalab API did not complete in time.")
+
+    # Recursively find all Table blocks from the children tree
+    table_blocks = []
+    for top_node in result.get("json", {}).get("children", []):
+        extract_blocks(top_node, table_blocks)
+
+    if not table_blocks:
+        raise ValueError("No tables found in the document.")
+
+    # Parse each table's HTML and stack vertically
+    dataframes = []
+    for block in table_blocks:
+        df = parse_html_table(block.get("html", ""))
+        if df is not None and not df.empty:
+            dataframes.append(df)
+
+    if not dataframes:
+        raise ValueError("Tables were found but could not be parsed.")
+
+    combined_frames = []
+    for i, df in enumerate(dataframes):
+        combined_frames.append(df)
+        if i < len(dataframes) - 1:
+            combined_frames.append(pd.DataFrame([[""] * df.shape[1]], columns=df.columns))
+
+    combined_df = pd.concat(combined_frames, ignore_index=True)
+
     csv_buffer = StringIO()
-    df.to_csv(csv_buffer, index=False)
+    combined_df.to_csv(csv_buffer, index=False)
     csv_data = csv_buffer.getvalue()
 
     return csv_data, base_filename
