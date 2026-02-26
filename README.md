@@ -8,6 +8,9 @@ A secure web application that converts bank statement PDFs into structured CSV f
 
 _Click the image above to watch the demo on YouTube_
 
+![Loading State](LoadingCircle.png)
+_Loading indicator shown while the PDF is being processed_
+
 ## Features
 
 - **Secure Processing**: Files are processed entirely in memory - never stored on disk
@@ -38,6 +41,12 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 git clone git@github.com:TheHungryGuy/Python-PDF-to-CSV.git
 cd Python-PDF-to-CSV
 uv sync
+```
+
+3. **Set your Datalab API key**:
+
+```bash
+echo "DATALAB_API_KEY=your_key_here" > .env
 ```
 
 ## Usage
