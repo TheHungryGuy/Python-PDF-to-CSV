@@ -43,6 +43,12 @@ cd Python-PDF-to-CSV
 uv sync
 ```
 
+3. **Set your Datalab API key**:
+
+```bash
+echo "DATALAB_API_KEY=your_key_here" > .env
+```
+
 ## Usage
 
 1. **Start the application**:
