@@ -82,7 +82,7 @@ def convert_PDF_to_CSV(file_bytes: bytes, original_filename: str) -> tuple:
     if result is None:
         raise TimeoutError("Datalab API did not complete in time.")
 
-    # Recursively find all Table blocks from the children tree
+    # find all table blocks from the children tree
     table_blocks = []
     for top_node in result.get("json", {}).get("children", []):
         extract_blocks(top_node, table_blocks)
@@ -90,7 +90,7 @@ def convert_PDF_to_CSV(file_bytes: bytes, original_filename: str) -> tuple:
     if not table_blocks:
         raise ValueError("No tables found in the document.")
 
-    # Parse each table's HTML and stack vertically
+    
     dataframes = []
     for block in table_blocks:
         df = parse_html_table(block.get("html", ""))
